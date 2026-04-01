@@ -122,9 +122,22 @@ class UIComponentGeneratorServer {
     });
   }
 
+  sanitizeForComment(input) {
+    return input
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, ' ')
+      .replace(/\r/g, '')
+      .slice(0, 500);
+  }
+
+  static VALID_FRAMEWORKS = ['react', 'vue', 'angular'];
+  static VALID_STYLING = ['tailwind', 'bootstrap', 'material-ui', 'vanilla-css'];
+  static VALID_FEATURES = ['responsive', 'accessible', 'dark-mode', 'animations'];
+  static MAX_INPUT_LENGTH = 10000;
+
   async handleGenerateComponent(args) {
     try {
-      // Validate required arguments
       if (!args.description || typeof args.description !== 'string') {
         throw new McpError(
           ErrorCode.InvalidParams,
@@ -132,16 +145,39 @@ class UIComponentGeneratorServer {
         );
       }
 
-      // Default values for optional arguments
-      const framework = args.framework || 'react';
-      const styling = args.styling || 'tailwind';
-      const features = args.features || ['responsive', 'accessible'];
-      const includePreview = args.includePreview || false;
+      if (args.description.length > UIComponentGeneratorServer.MAX_INPUT_LENGTH) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `description exceeds maximum length of ${UIComponentGeneratorServer.MAX_INPUT_LENGTH} characters`
+        );
+      }
 
-      // In a real implementation, this would use an AI model to generate
-      // the component based on the description and parameters
-      
-      // For this template, we'll just return mock data
+      const framework = args.framework || 'react';
+      if (!UIComponentGeneratorServer.VALID_FRAMEWORKS.includes(framework)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Invalid framework "${framework}". Must be one of: ${UIComponentGeneratorServer.VALID_FRAMEWORKS.join(', ')}`
+        );
+      }
+
+      const styling = args.styling || 'tailwind';
+      if (!UIComponentGeneratorServer.VALID_STYLING.includes(styling)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Invalid styling "${styling}". Must be one of: ${UIComponentGeneratorServer.VALID_STYLING.join(', ')}`
+        );
+      }
+
+      const features = args.features || ['responsive', 'accessible'];
+      if (!Array.isArray(features) || features.some(f => !UIComponentGeneratorServer.VALID_FEATURES.includes(f))) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Invalid features. Each must be one of: ${UIComponentGeneratorServer.VALID_FEATURES.join(', ')}`
+        );
+      }
+
+      const includePreview = args.includePreview === true;
+
       let componentCode = '';
       if (framework === 'react') {
         componentCode = this.generateReactComponent(args.description, styling, features);
@@ -178,7 +214,6 @@ class UIComponentGeneratorServer {
 
   async handleModifyComponent(args) {
     try {
-      // Validate required arguments
       if (!args.existingCode || typeof args.existingCode !== 'string') {
         throw new McpError(
           ErrorCode.InvalidParams,
@@ -192,13 +227,27 @@ class UIComponentGeneratorServer {
         );
       }
 
-      // Default value for optional argument
-      const framework = args.framework || 'react';
+      if (args.existingCode.length > UIComponentGeneratorServer.MAX_INPUT_LENGTH) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `existingCode exceeds maximum length of ${UIComponentGeneratorServer.MAX_INPUT_LENGTH} characters`
+        );
+      }
+      if (args.modification.length > UIComponentGeneratorServer.MAX_INPUT_LENGTH) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `modification exceeds maximum length of ${UIComponentGeneratorServer.MAX_INPUT_LENGTH} characters`
+        );
+      }
 
-      // In a real implementation, this would use an AI model to modify
-      // the component based on the existing code and modification description
-      
-      // For this template, we'll just return mock data
+      const framework = args.framework || 'react';
+      if (!UIComponentGeneratorServer.VALID_FRAMEWORKS.includes(framework)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Invalid framework "${framework}". Must be one of: ${UIComponentGeneratorServer.VALID_FRAMEWORKS.join(', ')}`
+        );
+      }
+
       const modifiedCode = this.modifyComponentCode(args.existingCode, args.modification, framework);
 
       return {
@@ -219,14 +268,13 @@ class UIComponentGeneratorServer {
   // In a real implementation, these would use AI models to generate components
 
   generateReactComponent(description, styling, features) {
-    // Mock implementation
+    const safeDesc = this.sanitizeForComment(description);
     return `
-// Generated React Component based on description: "${description}"
+// Generated React Component based on description: "${safeDesc}"
 // Using ${styling} styling with features: ${features.join(', ')}
 import React from 'react';
 
 const Component = () => {
-  // Component implementation would go here
   return (
     <div className="container">
       <h2>Generated Component</h2>
@@ -240,9 +288,9 @@ export default Component;
   }
 
   generateVueComponent(description, styling, features) {
-    // Mock implementation
+    const safeDesc = this.sanitizeForComment(description);
     return `
-<!-- Generated Vue Component based on description: "${description}" -->
+<!-- Generated Vue Component based on description: "${safeDesc}" -->
 <!-- Using ${styling} styling with features: ${features.join(', ')} -->
 <template>
   <div class="container">
@@ -254,16 +302,15 @@ export default Component;
 <script>
 export default {
   name: 'GeneratedComponent',
-  // Component implementation would go here
 }
 </script>
 `;
   }
 
   generateAngularComponent(description, styling, features) {
-    // Mock implementation
+    const safeDesc = this.sanitizeForComment(description);
     return `
-// Generated Angular Component based on description: "${description}"
+// Generated Angular Component based on description: "${safeDesc}"
 // Using ${styling} styling with features: ${features.join(', ')}
 import { Component } from '@angular/core';
 
@@ -277,21 +324,18 @@ import { Component } from '@angular/core';
   \`
 })
 export class GeneratedComponent {
-  // Component implementation would go here
 }
 `;
   }
 
   modifyComponentCode(existingCode, modification, framework) {
-    // Mock implementation
+    const safeMod = this.sanitizeForComment(modification);
     return `
-// Modified component based on request: "${modification}"
+// Modified component based on request: "${safeMod}"
 // Original code length: ${existingCode.length} characters
 // Framework: ${framework}
 
 ${existingCode}
-
-// Modifications would be applied here in the real implementation
 `;
   }
 
